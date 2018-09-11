@@ -1,0 +1,88 @@
+<head>
+  <style> body { margin: 0; } </style>
+
+  <script src="http:////unpkg.com/3d-force-graph"></script>
+  <script src="http://unpkg.com/three"></script>
+  <script src="http://cdn.rawgit.com/neo4j/neo4j-javascript-driver/1.4.1/lib/browser/neo4j-web.min.js"></script>
+  <!--<script src="../../dist/3d-force-graph.js"></script>-->
+</head>
+
+<body>
+  <div id="3d-graph"></div>
+
+  <script>
+      const elem = document.getElementById('3d-graph');
+      const driver = neo4j.v1.driver("bolt://204.236.241.70:35211", neo4j.v1.auth.basic("neo4j", "wills-growths-dab"));
+	    const session = driver.session();
+	    const start = new Date()
+      session
+      //.run('MATCH (n)-->(m) RETURN id(n) as source, id(m) as target LIMIT $limit', {limit: 5000})
+      //.run('MATCH p=(n)-[r]->(m) WHERE m.type IN ["Person","Role","Practice"] RETURN { id:id(n), label:n.practice, caption:n.name, size: n.weight } as source, { id:id(m), label:m.practice, caption:m.name, size: m.weight } as target, { weight:r.weight, type:type(r)} as rel')
+      .run("MATCH p=(m)-[r]->(n) WHERE m.type IN ['Role'] and n.type IN ['Role'] and not m.name in ['Resource Manager', 'Manager/Director'] and not n.name in  ['Resource Manager', 'Manager/Director'] RETURN { id:id(n), label:n.practice, caption:n.name, size: n.weight } as source, { id:id(m), label:m.practice, caption:m.name, size: m.weight } as target, { weight:r.weight, type:type(r)} as rel")
+      //.run('MATCH p=(n)-[r]->(m) WHERE m.type IN ["Person","Role","Practice"] RETURN id(n) as source, id(m) as target')
+      .then(function (result) {
+        const nodes = {}
+        const links = result.records.map(r => { 
+         var source = r.get('source');source.id = source.id.toNumber();
+           nodes[source.id] = source;
+         var target = r.get('target');target.id = target.id.toNumber();
+           nodes[target.id] = target;
+         return {source:source.id,target:target.id}
+      });
+        session.close();
+        console.log(links.length+" links loaded in "+(new Date()-start)+" ms.")
+        let highlightNodes = [];
+        let highlightLink = null;
+        const gData = { nodes: Object.values(nodes), links: links}
+        const Graph = ForceGraph3D()(elem)
+              .graphData(gData)
+              .nodeAutoColorBy('label')
+              .nodeVal('size')
+              .nodeOpacity(1)
+              .linkAutoColorBy('type')
+              .linkWidth('weight')
+              .linkCurvature('curvature')
+              .linkCurveRotation('rotation')
+              //.linkDirectionalParticles(4)
+              .nodeResolution(18)
+              .nodeLabel('caption')
+              //.nodeThreeObject(({ id }) => new THREE.Mesh(
+              //  [
+              //      new THREE.BoxGeometry(Math.random() * 20, Math.random() * 20, Math.random() * 20),
+              //      new THREE.ConeGeometry(Math.random() * 10, Math.random() * 20),
+              //      new THREE.CylinderGeometry(Math.random() * 10, Math.random() * 10, Math.random() * 20),
+              //      new THREE.DodecahedronGeometry(Math.random() * 10),
+              //      new THREE.SphereGeometry(Math.random() * 10),
+              //      new THREE.TorusGeometry(Math.random() * 10, Math.random() * 2),
+              //      new THREE.TorusKnotGeometry(Math.random() * 10, Math.random() * 2)
+              //  ][id%7],
+              //  new THREE.MeshLambertMaterial({
+              //      color: Math.round(Math.random() * Math.pow(2, 24)),
+              //      transparent: true,
+              //      opacity: 0.75
+              //})))
+              //.onNodeHover(node => {
+              //          // no state change
+              //          if ((!node && !highlightNodes.length) || (highlightNodes.length === 1 && highlightNodes[0] === node)) return;
+              //          highlightNodes = node ? [node] : [];
+              //          updateGeometries();
+              //        })
+              //      .onNodeClick(node => {
+              //              // Aim at node from outside it
+              //              const distance = 40;
+              //              const distRatio = 1 + distance/Math.hypot(node.x, node.y, node.z);
+              //              Graph.cameraPosition(
+              //                { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio }, // new position
+              //                node, // lookAt ({ x, y, z })
+              //                3000  // ms transition duration
+              //              );
+              //      });
+        function updateGeometries() {
+              Graph.nodeRelSize(4); // trigger update of 3d objects in scene
+        }    
+      })
+      .catch(function (error) {
+        console.log(error);
+      });
+  </script>
+</body>
