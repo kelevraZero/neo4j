@@ -1,0 +1,122 @@
+<!doctype html>
+<html>
+<head>
+    <title>Neovis.js Simple Example</title>
+    <style type="text/css">
+        html, body {
+            font: 16pt arial;
+        }
+        #cypher {
+            font: 22pt arial;
+        }
+        #reload {
+            font: 18pt arial;
+        }
+        #viz {
+            width: 1800px;
+            height: 1400px;
+            border: 1px solid lightgray;
+            font: 22pt arial;
+        }
+    </style>
+
+    <!-- FIXME: load from dist -->
+    <script src="https://rawgit.com/neo4j-contrib/neovis.js/master/dist/neovis.js"></script>
+    <script
+            src="https://code.jquery.com/jquery-3.2.1.min.js"
+            integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+            crossorigin="anonymous"></script>
+
+
+<script type="text/javascript">
+    // define config car
+    // instantiate nodevis object
+    // draw
+    var viz;
+    function draw() {
+        var config = {
+            container_id: "viz",
+            server_url: "bolt://204.236.241.70:35211",
+            server_user: "neo4j",
+            server_password: "wills-growths-dab",
+            hierarchical_layout: "true",
+            hierarchical_sort_method: "directed",
+            labels: {
+                "ROLE": {
+                    caption: "name",
+                    size: "weight",
+                    community: "practice"
+                    //"sizeCypher": "MATCH (n) WHERE id(n) = {id} MATCH (n)-[r]-() RETURN sum(r.weight) AS c"
+                },
+                "PRACTICE": {
+                    caption: "name",
+                    size: "10",
+                    //community: "practice",
+                    color: "black"
+                    //"sizeCypher": "MATCH (n) WHERE id(n) = {id} MATCH (n)-[r]-() RETURN sum(r.weight) AS c"
+                },
+                "PERSON": {
+                    caption: "name",
+                    size: 0.5,
+                    community: "practice",
+                    //"sizeCypher": "MATCH (n) WHERE id(n) = {id} MATCH (n)-[r]-() RETURN sum(r.weight) AS c"
+                }
+            },
+            relationships: {
+                "PERSON_ROLE": {
+                    caption: false,
+                    thickness: 0.5
+                },
+                "PRACTICE_ROLE": {
+                    caption: false,
+                    thickness: 5
+                },
+                "ROLE_ROLE": {
+                    caption: false,
+                    thickness: "weight"
+                }
+            },
+          //  initial_cypher: "MATCH (n:NODE) WHERE n.type = 'Role' MATCH p=(:NODE)-[r:LINKS]->(n) RETURN p"
+            initial_cypher: "MATCH p=()-[r]->(n) WHERE n.type IN ['Person','Role'] RETURN p"
+        };
+        viz = new NeoVis.default(config);
+        viz.render();
+        console.log(viz);
+         
+    }
+</script>
+</head>
+<body onload="draw()">
+</br>
+
+<FORM >
+<SELECT id="cypher">
+<OPTION value="MATCH p=(m)-[r]->(n) WHERE n.type IN ['Person','Role'] RETURN p"> Role + Personne</OPTION>
+<OPTION value="MATCH p=(m)-[r]->(n) WHERE n.type IN ['Person','Role'] and NOT m.type IN ['Person'] RETURN p"> Role seulement</OPTION>
+<OPTION value="MATCH p=(m)-[r]->(n) WHERE n.type IN ['Person','Role'] and NOT m.type IN ['Person'] AND not m.name in ['Resource Manager', 'Manager/Director'] and not n.name in  ['Resource Manager', 'Manager/Director'] RETURN p"> Role seulement (sans "Resource Manager" et "Manager / Director")</OPTION>
+</SELECT>
+</FORM>
+<input type="submit" value="Submit" id="reload">
+</br></br></br>
+
+<div id="viz"></div>
+
+<script>
+    $("#reload").click(function() {
+        
+        var cypher = $("#cypher").val();
+        if (cypher.length > 3) {
+            viz.renderWithCypher(cypher);
+        } else {
+            console.log("reload");
+            viz.reload();
+        }
+    });
+    $("#stabilize").click(function() {
+        viz.stabilize();
+    })
+</script>
+
+</body>
+
+</html>
